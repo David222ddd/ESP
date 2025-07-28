@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>统计路径引导</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .visual {
+      flex: 2;
+      border-right: 1px solid #ccc;
+    }
+    .form-area {
+      flex: 1;
+      background: #f0f0f0;
+      padding: 30px;
+    }
+    .step-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .step-title {
+      font-size: 20px;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    .choice {
+      display: block;
+      background: #337066;
+      color: white;
+      border: none;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .choice:hover {
+      background: #28574f;
+    }
+  </style>
+</head>
+<body>
+  <div class="visual" id="chart"></div>
+  <div class="form-area">
+    <div class="step-box">
+      <div id="stepText" class="step-title"></div>
+      <div id="stepChoices"></div>
+    </div>
+  </div>
+
+  <script>
+    const decisionData = {
+      label: '统计路径',
+      info: '起点',
+      children: [
+        {
+          label: '定性分析',
+          info: '分类型变量',
+          children: [
+            {
+              label: '配对四格表',
+              info: '配对设计的分类数据',
+              children: [
+                { label: 'McNemar检验', info: '配对四格表方法' }
+              ]
+            },
+            {
+              label: 'R×C列联表',
+              info: '多分类变量分析',
+              children: []
+            }
+          ]
+        },
+        {
+          label: '定量分析',
+          info: '连续变量',
+          children: [
+            { label: '单样本t检验', info: '均值与特定值比较' },
+            { label: '两独立样本t检验', info: '两个均值差异' }
+          ]
+        }
+      ]
+    };
+
+    const guideSteps = [
+      { question: '开始引导流程', options: ['统计路径'] },
+      { question: '你的因变量类型是？', options: ['定性分析', '定量分析'] },
+      { question: '你使用的是哪类定性资料？', options: ['配对四格表', 'R×C列联表'] },
+      { question: '推荐方法如下：', options: ['McNemar检验'] }
+    ];
+
+    const history = [decisionData.label];
+    let progress = 0;
+
+    const treeState = {
+      label: decisionData.label,
+      info: decisionData.info,
+      children: []
+    };
+
+    const treeChart = echarts.init(document.getElementById('chart'));
+
+    function findInTree(tree, label) {
+      if (tree.label === label) return tree;
+      if (!tree.children) return null;
+      for (const node of tree.children) {
+        const res = findInTree(node, label);
+        if (res) return res;
+      }
+      return null;
+    }
+
+    function cloneChildren(sourceNode) {
+      return (sourceNode.children || []).map(child => ({
+        label: child.label,
+        info: child.info,
+        children: []
+      }));
+    }
+
+    function updateChart() {
+      treeChart.setOption({
+        series: [{
+          type: 'tree',
+          data: [treeState],
+          top: '5%',
+          left: '5%',
+          right: '5%',
+          bottom: '5%',
+          symbol: 'circle',
+          symbolSize: 20,
+          label: {
+            position: 'right',
+            align: 'left',
+            verticalAlign: 'middle',
+            fontSize: 14
+          },
+          roam: true,
+          expandAndCollapse: false
+        }]
+      });
+    }
+
+    function showStep() {
+      const step = guideSteps[progress];
+      const stepText = document.getElementById('stepText');
+      const stepChoices = document.getElementById('stepChoices');
+
+      if (!step) {
+        stepText.innerText = '引导完成 🎉';
+        stepChoices.innerHTML = '';
+        return;
+      }
+
+      stepText.innerText = step.question;
+      stepChoices.innerHTML = '';
+      step.options.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'choice';
+        btn.innerText = choice;
+        btn.onclick = () => {
+          history.push(choice);
+          const srcNode = findInTree(decisionData, choice);
+          const targetNode = findInTree(treeState, history[history.length - 2]);
+          if (srcNode && targetNode) {
+            targetNode.children = cloneChildren(srcNode);
+          }
+          updateChart();
+          progress++;
+          showStep();
+        };
+        stepChoices.appendChild(btn);
+      });
+    }
+
+    updateChart();
+    showStep();
+  </script>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>统计方法引导</title>
+  <!-- 请确保 echarts.min.js 与本文件在同目录下 -->
+  <script src="echarts.min.js"></script>
+  <style>
+    body { 
+      margin: 0; 
+      font-family: sans-serif; 
+      display: flex; 
+      height: 100vh; 
+    }
+    #tree { 
+      flex: 1; 
+      height: 100vh; 
+      border-right: 1px solid #ccc; 
+    }
+    #quiz { 
+      width: 35%; 
+      padding: 20px; 
+      background: #f9f9f9; 
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    .card { 
+      background: white; 
+      border-radius: 10px; 
+      padding: 20px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+      margin-bottom: 20px;
+      flex: 1;
+    }
+    .question { 
+      font-size: 18px; 
+      margin-bottom: 10px; 
+    }
+    .option {
+      background-color: #4F704E;
+      color: white;
+      padding: 10px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      cursor: pointer;
+      text-align: left;
+      font-size: 16px;
+    }
+    .option:hover { 
+      background-color: #3b5a3c; 
+    }
+    .option.selected { 
+      background-color: #357a38; 
+    }
+    #explanation {
+      font-size: 15px;
+      margin-top: 10px;
+      padding: 10px;
+      background: #eef;
+      border-radius: 8px;
+      border: 1px solid #ccd;
+    }
+    #navButtons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    #navButtons button {
+      flex: 1;
+      margin: 0 5px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      color: white;
+    }
+    #backBtn { background-color: #013547; }
+    #nextBtn { background-color: #FDDCC8; }
+    #resetBtn { background-color: #4F704E; }
+  </style>
+</head>
+<body>
+  <div id="tree"></div>
+  <div id="quiz">
+    <div class="card" id="quizCard">
+      <div class="question" id="questionText"></div>
+      <div id="options"></div>
+      <div id="explanation"></div>
+      <div id="navButtons">
+        <button id="backBtn">返回上一步</button>
+        <button id="nextBtn">下一步</button>
+        <button id="resetBtn">重新引导</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /****************** 树状图数据定义 ******************/
+    // 完整树状图数据，每个节点均包含 description 字段
+    const fullTree = {
+      name: '统计分析方法选择',
+      value: '请选择路径',
+      description: '请选择适合你的统计分析方法',
+      children: [
+        {
+          name: '描述性统计',
+          value: '描述性统计',
+          description: '用于描述数据分布及正态性检验的统计方法',
+          children: []  // 无后续分支
+        },
+        {
+          name: '定性资料分析',
+          value: '定性资料分析',
+          description: '用于分析分类数据的统计方法',
+          children: [
+            {
+              name: '配对四格表资料',
+              value: '配对四格表资料',
+              description: '适用于配对设计的四格表数据',
+              children: [
+                { name: 'McNemar检验', value: 'McNemar检验', description: '用于配对四格表资料的检验方法' }
+              ]
+            },
+            {
+              name: 'R×C列联表资料',
+              value: 'R×C列联表资料',
+              description: '用于多分类变量之间的列联分析',
+              children: [
+                { name: 'Pearson卡方检验', value: 'Pearson卡方检验', description: '适用于各格子期望频数T≥5且N≥40的情况' },
+                { name: '连续性校正卡方检验', value: '连续性校正卡方检验', description: '当部分格子期望频数在1至5之间时使用' },
+                { name: 'Fisher确切概率法', value: 'Fisher确切概率法', description: '当格子期望频数T<1或样本量不足时使用' },
+                { name: '行均分检验', value: '行均分检验', description: '针对有序分类资料的列联分析检验' },
+                { name: '非参数秩和检验', value: '非参数秩和检验', description: '另一种针对有序分类资料的非参数检验方法' }
+              ]
+            },
+            {
+              name: '分层卡方检验',
+              value: '分层卡方检验',
+              description: '用于比较独立双向无序/分组变量单向有序且含分层资料构成比',
+              children: []
+            },
+            {
+              name: '单向有序趋势卡方',
+              value: '单向有序趋势卡方',
+              description: '用于分组变量为有序、结局变量为二分类的单向有序资料分析',
+              children: []
+            },
+            {
+              name: '双向有序趋势卡方',
+              value: '双向有序趋势卡方',
+              description: '用于检验分组变量和结局变量均为有序数据间的线性趋势',
+              children: []
+            }
+          ]
+        },
+        {
+          name: '定量资料分析',
+          value: '定量资料分析',
+          description: '用于分析连续数据的统计方法',
+          children: [
+            {
+              name: '单组',
+              value: '单组数据分析',
+              description: '针对单个样本数据的检验方法',
+              children: [
+                { name: '单样本t检验', value: '单样本t检验', description: '检验单组数据均值是否等于特定值（正态且方差齐性）' },
+                { name: "单样本t'检验", value: "单样本t'检验", description: '当数据不满足方差齐性时的单组均值检验' },
+                { name: '单样本Wilcoxon检验', value: '单样本Wilcoxon检验', description: '非正态情况下使用的非参数检验' }
+              ]
+            },
+            {
+              name: '双组',
+              value: '双组数据分析',
+              description: '针对两个样本数据的检验方法',
+              children: [
+                {
+                  name: '独立样本',
+                  value: '独立样本分析',
+                  description: '比较两个独立样本的均值差异',
+                  children: [
+                    { name: '两独立样本t检验', value: '两独立样本t检验', description: '正态且方差齐性条件下的均值比较' },
+                    { name: "两独立样本t'检验", value: "两独立样本t'检验", description: '当不满足方差齐性时使用' },
+                    { name: '两独立样本Wilcoxon检验', value: '两独立样本Wilcoxon检验', description: '非正态情况下的非参数比较' }
+                  ]
+                },
+                {
+                  name: '配对样本',
+                  value: '配对样本分析',
+                  description: '比较配对样本之间的均值差异',
+                  children: [
+                    { name: '配对样本t检验', value: '配对样本t检验', description: '正态分布且方差齐性条件下的配对均值比较' },
+                    { name: "配对样本t'检验", value: "配对样本t'检验", description: '当差值数据不满足方差齐性时使用' },
+                    { name: '配对样本Wilcoxon检验', value: '配对样本Wilcoxon检验', description: '非正态情况下的非参数配对比较' }
+                  ]
+                }
+              ]
+            },
+            {
+              name: '多组',
+              value: '多组数据分析',
+              description: '针对三个及以上样本之间的比较检验',
+              children: [
+                { name: '因素方差分析', value: '因素方差分析', description: '正态且方差齐性条件下的均值比较' },
+                { name: 'Kruskal-Wallis秩和检验', value: 'Kruskal-Wallis秩和检验', description: '非正态情况下的多组比较（非参数）' },
+                { name: 'Friedman秩和检验', value: 'Friedman秩和检验', description: '适用于配对设计的多组比较非参数检验' },
+                { name: '双因素方差分析', value: '双因素方差分析', description: '考虑两个自变量影响的多组比较' },
+                { name: '多因素方差分析', value: '多因素方差分析', description: '考虑多个自变量影响的多组比较' },
+                { name: '协方差分析', value: '协方差分析', description: '在控制协变量影响后的均值比较' }
+              ]
+            }
+          ]
+        },
+        {
+          name: '相关性分析',
+          value: '相关性分析',
+          description: '用于检测变量之间相关关系的统计方法',
+          children: [
+            { name: "Pearson's相关系数", value: "Pearson's相关系数", description: '用于正态分布连续变量之间的相关性检验' },
+            { name: "Spearman's秩相关", value: "Spearman's秩相关", description: '用于非正态连续变量或等级数据之间的相关性检验' },
+            { name: "Kendall's tau-b相关系数", value: "Kendall's tau-b相关系数", description: '用于检验等级数据间的相关性' }
+          ]
+        },
+        {
+          name: '一致性检验',
+          value: '一致性检验',
+          description: '用于检测多组或两组数据一致性的检验方法',
+          children: [
+            { name: "Cohen's kappa系数", value: "Cohen's kappa系数", description: '用于两组分类变量之间的一致性检验' },
+            { name: "Fleiss' kappa系数", value: "Fleiss' kappa系数", description: '用于多组分类变量之间的一致性检验' },
+            { name: "加权kappa系数", value: "加权kappa系数", description: '用于有序分类变量之间的一致性检验' },
+            { name: "Kendal协调系数", value: "Kendal协调系数", description: '用于多组有序分类变量之间的一致性检验' },
+            { name: "组内相关性系数(ICC)", value: "组内相关性系数(ICC)", description: '用于连续变量之间的一致性检验' },
+            { name: "ATE/LER区域法", value: "ATE/LER区域法", description: '用于两组连续变量一致性检验的方法' }
+          ]
+        },
+        {
+          name: '回归分析',
+          value: '回归分析',
+          description: '用于建立变量间回归关系的统计方法',
+          children: [
+            { name: '线性回归', value: '线性回归', description: '用于连续因变量与自变量关系的建模（包括一元和多元回归）' },
+            { name: '泊松回归', value: '泊松回归', description: '适用于计数数据且均值与方差相近的情况' },
+            { name: '负二项回归', value: '负二项回归', description: '适用于计数数据且存在过离散现象时使用' },
+            { name: '二元Logistic回归', value: '二元Logistic回归', description: '用于二分类因变量的回归分析' },
+            { name: '多元Logistic回归', value: '多元Logistic回归', description: '适用于无序多分类因变量的回归分析' },
+            { name: '有序Logistic回归', value: '有序Logistic回归', description: '用于有序多分类因变量的回归建模' },
+            { name: 'Kaplan-Meier生存曲线', value: 'Kaplan-Meier生存曲线', description: '用于展示生存数据的生存曲线' },
+            { name: 'Log-rank检验', value: 'Log-rank检验', description: '用于比较生存曲线的统计检验' },
+            { name: '单因素COX分析', value: '单因素COX分析', description: '单变量生存分析的回归方法' },
+            { name: 'Breslow 检验', value: 'Breslow 检验', description: '用于生存数据分析中曲线交叉情况的检验' },
+            { name: 'Two-stage检验', value: 'Two-stage检验', description: '另一种生存数据中曲线交叉情况的分析方法' },
+            { name: 'Fine-Gray检验', value: 'Fine-Gray检验', description: '用于存在竞争风险事件时的生存分析' },
+            { name: '寿命表法', value: '寿命表法', description: '用于描述终点事件时间分布的统计方法' },
+            { name: '多因素Cox模型', value: '多因素Cox模型', description: '用于多变量生存数据回归分析' },
+            { name: '竞争风险模型', value: '竞争风险模型', description: '用于存在竞争风险事件的生存数据分析' },
+            { name: 'weibull回归', value: 'weibull回归', description: '当数据服从weibull分布时的回归方法' },
+            { name: '岭回归', value: '岭回归', description: '适用于存在多重共线性的连续变量回归分析' },
+            { name: '套索(Lasso)回归', value: '套索(Lasso)回归', description: '与岭回归类似，但可实现变量选择' },
+            { name: '偏最小二乘回归', value: '偏最小二乘回归', description: '适用于样本量较少时的多变量回归建模' }
+          ]
+        },
+        {
+          name: '其他统计分析',
+          value: '其他统计分析',
+          description: '其他各类统计分析方法',
+          children: [
+            { name: '诊断试验', value: '诊断试验', description: '包括TP/TN/PPV/NPV/ACC等性能指标的评估' },
+            { name: 'ROC曲线及曲线下面积', value: 'ROC曲线及曲线下面积', description: '用于评价诊断能力的统计方法' },
+            { name: '主成分分析', value: '主成分分析', description: '用于降维及特征提取的统计方法' },
+            { name: '因子分析', value: '因子分析', description: '用于从复杂变量群中提取共性因子的统计方法' },
+            { name: '判别分析', value: '判别分析', description: '依据观测指标进行个体类别判定的统计方法' },
+            { name: '分类树/回归树', value: '分类树/回归树', description: '基于决策树的分类或回归方法' },
+            { name: '随机森林', value: '随机森林', description: '集成多棵决策树以进行预测的统计方法' },
+            { name: '支持向量机', value: '支持向量机', description: '在特征空间上分隔数据的线性二分类器' },
+            { name: '梯度提升树模型', value: '梯度提升树模型', description: '决策树的集成算法，用于分类或回归预测' },
+            { name: '时间序列分析', value: '时间序列分析', description: '按时间顺序分析数据变化趋势的统计方法' }
+          ]
+        }
+      ]
+    };
+
+    /****************** 个性化问卷问题映射 ******************/
+    const questionMapping = {
+      "统计分析方法选择": "请点击‘统计分析方法选择’开始引导",
+      "描述性统计": "请选择您需要使用的描述性统计方法（用于数据描述与正态性检验）",
+      "定性资料分析": "请选择您需要的定性资料分析方法",
+      "配对四格表资料": "请选择配对四格表资料中的具体检验方法",
+      "R×C列联表资料": "请选择适用于R×C列联表资料的检验方法",
+      "分层卡方检验": "确认采用分层卡方检验",
+      "单向有序趋势卡方": "确认采用单向有序趋势卡方",
+      "双向有序趋势卡方": "确认采用双向有序趋势卡方",
+      "定量资料分析": "请选择您需要的定量资料分析类型",
+      "单组": "请选择针对单组数据的检验方法",
+      "双组": "请选择针对双组数据的检验类型",
+      "独立样本": "请选择适用于独立样本的检验方法",
+      "配对样本": "请选择适用于配对样本的检验方法",
+      "多组": "请选择适用于多组数据的检验方法",
+      "相关性分析": "请选择相关性分析的方法",
+      "一致性检验": "请选择一致性检验的方法",
+      "回归分析": "请选择您需要的回归分析方法",
+      "其他统计分析": "请选择其他统计分析方法"
+    };
+
+    function getQuestionText(nodeName) {
+      return questionMapping[nodeName] || "请选择下一级检验方法";
+    }
+
+    /****************** 状态变量 ******************/
+    // history存储从根节点到当前节点的路径（存储节点名称）
+    let history = ["统计分析方法选择"];
+    // 当前节点（初始为全树的根节点）
+    let currentNode = fullTree;
+    // 当前用户在该步骤选中的待确认选项（对象，或者 null）
+    let selectedOption = null;
+
+    // 当前显示的树状图数据（初始仅包含根节点，不展开子节点）
+    let currentTree = {
+  name: fullTree.name,
+  value: fullTree.value,
+  description: fullTree.description,
+  children: fullTree.children.map(child => ({
+    name: child.name,
+    value: child.value,
+    description: child.description,
+    children: []   // 下一级暂时不展开
+  }))
+};
+
+
+    /****************** echarts 初始化 ******************/
+    const chart = echarts.init(document.getElementById('tree'));
+    function renderTree() {
+      chart.setOption({
+        series: [{
+          type: 'tree',
+          data: [currentTree],
+          top: '5%',
+          left: '5%',
+          bottom: '5%',
+          right: '5%',
+          symbol: 'circle',
+          symbolSize: 20,
+          label: {
+            position: 'right',
+            verticalAlign: 'middle',
+            align: 'left',
+            fontSize: 13,
+            color: '#013547'
+          },
+          roam: true,
+          expandAndCollapse: false
+        }]
+      });
+    }
+
+    // 递归查找节点，根据名称匹配
+    function findNode(tree, name) {
+      if (tree.name === name) return tree;
+      if (!tree.children) return null;
+      for (let child of tree.children) {
+        let found = findNode(child, name);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // 更新当前树状图：根据history数组，重构currentTree
+    function rebuildCurrentTree() {
+  // 将根节点的子节点一并复制进来
+  currentTree = {
+    name: fullTree.name,
+    value: fullTree.value,
+    description: fullTree.description,
+    children: fullTree.children.map(child => ({
+      name: child.name,
+      value: child.value,
+      description: child.description,
+      children: []  // 下一级暂时不展开
+    }))
+  };
+  // 模拟逐层展开，每个选项根据 history（除了根节点）
+  for (let i = 1; i < history.length; i++) {
+    expandNodeInTree(history[i]);
+  }
+}
+
+
+    // 根据名称，在currentTree中寻找相应节点，并展开其子节点（仅复制第一层）
+    function expandNodeInTree(name) {
+      let sourceNode = findNode(fullTree, name);
+      let targetNode = findNode(currentTree, name);
+      if (sourceNode && sourceNode.children && targetNode) {
+        targetNode.children = sourceNode.children.map(child => ({
+          name: child.name,
+          value: child.value,
+          description: child.description,
+          children: []
+        }));
+      }
+    }
+
+    // 清除树中所有节点样式的函数
+    function clearTreeFocus(node) {
+      if (node.itemStyle) delete node.itemStyle;
+      if (node.children) {
+        node.children.forEach(child => clearTreeFocus(child));
+      }
+    }
+    // 递归更新节点样式：使当前选中的节点颜色高亮，其余置灰
+    function updateTreeFocus(node, targetName) {
+      let found = (node.name === targetName);
+      if (node.children) {
+        node.children.forEach(child => {
+          if (updateTreeFocus(child, targetName)) {
+            found = true;
+          }
+        });
+      }
+      node.itemStyle = { color: found ? '#013547' : '#ccc' };
+      return found;
+    }
+
+    /****************** 问卷流程渲染 ******************/
+    function renderQuestion() {
+      const qText = document.getElementById('questionText');
+      const optDiv = document.getElementById('options');
+      const explanationDiv = document.getElementById('explanation');
+
+      // 清空旧内容
+      optDiv.innerHTML = '';
+      // 显示当前节点个性化问题文本（基于当前节点名称）
+      qText.innerText = getQuestionText(currentNode.name);
+      // 如果有待确认选项，则在说明区域显示选项说明
+      if (selectedOption) {
+        explanationDiv.innerText = selectedOption.description;
+      } else {
+        explanationDiv.innerText = "";
+      }
+      // 如果当前节点有下一级，则展示对应选项按钮，否则视为到达叶子节点
+      if (currentNode.children && currentNode.children.length > 0) {
+        currentNode.children.forEach(child => {
+          const btn = document.createElement('button');
+          btn.innerText = child.name;
+          btn.className = 'option';
+          btn.onclick = function() {
+            // 清除其他按钮高亮，并标记当前选中项
+            document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedOption = child;
+            explanationDiv.innerText = child.description;
+          };
+          optDiv.appendChild(btn);
+        });
+      } else {
+        // 无下一级，说明已达叶子节点
+        qText.innerText = `引导完成 🎉 您的选择路径：${history.join(' -> ')}`;
+        explanationDiv.innerText = currentNode.description;
+      }
+    }
+
+    /****************** 导航按钮逻辑 ******************/
+    // “下一步”：如果当前有选中项且当前节点有子节点，则推进一步
+    document.getElementById('nextBtn').onclick = function() {
+      if (currentNode.children && currentNode.children.length > 0) {
+        if (!selectedOption) {
+          alert("请先选择一个选项");
+          return;
+        }
+        // 更新 history 与 currentNode
+        history.push(selectedOption.name);
+        currentNode = findNode(fullTree, selectedOption.name);
+        // 清空待选状态
+        selectedOption = null;
+        // 重新构造 currentTree 根据 history，并更新树状图展示
+        rebuildCurrentTree();
+        clearTreeFocus(currentTree);
+        updateTreeFocus(currentTree, history[history.length - 1]);
+        renderTree();
+        renderQuestion();
+      }
+    };
+
+    // “返回上一步”：如果当前已不是根节点，则退回上一步
+    document.getElementById('backBtn').onclick = function() {
+      if (history.length <= 1) {
+        alert("已经是第一步，无法返回上一步");
+        return;
+      }
+      history.pop();
+      currentNode = findNode(fullTree, history[history.length - 1]);
+      selectedOption = null;
+      rebuildCurrentTree();
+      clearTreeFocus(currentTree);
+      updateTreeFocus(currentTree, history[history.length - 1]);
+      renderTree();
+      renderQuestion();
+    };
+
+    // “重新引导”：重置全部状态
+    document.getElementById('resetBtn').onclick = function() {
+  history = ["统计分析方法选择"];
+  currentNode = fullTree;
+  selectedOption = null;
+  currentTree = {
+    name: fullTree.name,
+    value: fullTree.value,
+    description: fullTree.description,
+    children: fullTree.children.map(child => ({
+      name: child.name,
+      value: child.value,
+      description: child.description,
+      children: []
+    }))
+  };
+  renderTree();
+  renderQuestion();
+};
+
+
+    // 初始渲染
+    renderTree();
+    renderQuestion();
+  </script>
+</body>
+</html>

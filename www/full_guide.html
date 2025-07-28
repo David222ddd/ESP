@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>统计方法引导</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; }
+    #tree { width: 100%; height: 100vh; border-right: 1px solid #ccc; }
+    #quiz { width: 35%; padding: 20px; background: #f9f9f9; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .question { font-size: 18px; margin-bottom: 10px; }
+    .option {
+      background-color: #4F704E;
+      color: white;
+      padding: 10px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      cursor: pointer;
+      text-align: left;
+      font-size: 16px;
+    }
+    .option:hover { background-color: #3b5a3c; }
+  </style>
+</head>
+<body>
+  <div id="tree"></div>
+  <div id="quiz">
+    <div class="card">
+      <div class="question" id="questionText"></div>
+      <div id="options"></div>
+    </div>
+  </div>
+
+  <script>
+    const fullTree = {
+      name: '统计方法选择',
+      value: '请选择路径',
+      children: [
+        {
+          name: '定性资料分析',
+          value: '分类变量分析',
+          children: [
+            {
+              name: '配对四格表资料',
+              value: '用于配对设计的分类资料',
+              children: [
+                { name: 'McNemar检验', value: '用于配对四格表资料的检验方法' }
+              ]
+            },
+            {
+              name: 'R×C列联表资料',
+              value: '多分类变量列联分析',
+              children: []
+            }
+          ]
+        },
+        {
+          name: '定量资料分析',
+          value: '连续变量分析',
+          children: [
+            { name: '单样本t检验', value: '检验单组数据均值是否等于特定值' },
+            { name: '两独立样本t检验', value: '检验两个独立样本均值差异' }
+          ]
+        }
+      ]
+    };
+
+    const questionFlow = [
+      {
+        text: '点击开始引导',
+        options: ['统计方法选择']
+      },
+      {
+        text: '你的因变量类型是？',
+        options: ['定性资料分析', '定量资料分析']
+      },
+      {
+        text: '你选择的是哪类定性数据？',
+        options: ['配对四格表资料', 'R×C列联表资料']
+      },
+      {
+        text: '推荐方法如下：',
+        options: ['McNemar检验']
+      }
+    ];
+
+    let currentTree = {
+      name: fullTree.name,
+      value: fullTree.value,
+      children: []
+    };
+
+    const path = [fullTree.name];
+    let currentStep = 0;
+    const chart = echarts.init(document.getElementById('tree'));
+
+    function findNode(tree, name) {
+      if (tree.name === name) return tree;
+      if (!tree.children) return null;
+      for (let child of tree.children) {
+        const found = findNode(child, name);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function expandNode(name) {
+      const sourceNode = findNode(fullTree, name);
+      const targetNode = findNode(currentTree, name);
+      if (sourceNode && sourceNode.children && targetNode) {
+        targetNode.children = sourceNode.children.map(child => ({
+          name: child.name,
+          value: child.value,
+          children: []
+        }));
+      }
+    }
+
+    function renderTree() {
+      chart.setOption({
+        series: [{
+          type: 'tree',
+          data: [currentTree],
+          top: '5%',
+          left: '5%',
+          bottom: '5%',
+          right: '5%',
+          symbol: 'circle',
+          symbolSize: 20,
+          label: {
+            position: 'right',
+            verticalAlign: 'middle',
+            align: 'left',
+            fontSize: 13,
+            color: '#013547'
+          },
+          roam: true,
+          expandAndCollapse: false
+        }]
+      });
+    }
+
+    function renderQuestion() {
+      const q = questionFlow[currentStep];
+      if (!q) {
+        document.getElementById('questionText').innerText = '引导完成 🎉';
+        document.getElementById('options').innerHTML = '';
+        return;
+      }
+      document.getElementById('questionText').innerText = q.text;
+      const optDiv = document.getElementById('options');
+      optDiv.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.innerText = opt;
+        btn.className = 'option';
+        btn.onclick = () => {
+          path.push(opt);
+          expandNode(opt);
+          renderTree();
+          currentStep++;
+          renderQuestion();
+        };
+        optDiv.appendChild(btn);
+      });
+    }
+
+    renderTree();
+    renderQuestion();
+  </script>
+</body>
+</html>
