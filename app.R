@@ -34,7 +34,8 @@ ui <- dashboardPage(
       menuItem("定量资料分析",      tabName = "quantitative", icon = icon("calculator")),
       menuItem("相关性分析",        tabName = "correlation",  icon = icon("project-diagram")),
       menuItem("一致性检验",        tabName = "consistency",  icon = icon("check-circle")),
-      menuItem("回归分析",          tabName = "regression",   icon = icon("chart-line"))
+      menuItem("回归分析",          tabName = "regression",   icon = icon("chart-line")),
+      menuItem("生存数据分析",      tabName = "survival",    icon = icon("hourglass"))
     )
   ),
   controlbar = dashboardControlbar(
@@ -134,16 +135,22 @@ ui <- dashboardPage(
         h2("一致性检验"),
         verbatimTextOutput("test_consistency")
       ),
-      # 9. 回归分析
-      tabItem(
-        tabName = "regression",
-        h2("回归分析"),
-        plotOutput("plot_regression"),
-        verbatimTextOutput("summary_regression")
+        # 9. 回归分析
+        tabItem(
+          tabName = "regression",
+          h2("回归分析"),
+          plotOutput("plot_regression"),
+          verbatimTextOutput("summary_regression")
+        ),
+        # 10. 生存数据分析
+        tabItem(
+          tabName = "survival",
+          h2("生存数据分析"),
+          p("此处将展示生存数据分析相关内容。")
+        )
       )
     )
-  )
-)  # end ui
+  )  # end ui
 
 # Server 部分
 server <- function(input, output, session) {
